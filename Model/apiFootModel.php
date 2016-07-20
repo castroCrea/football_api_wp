@@ -9,11 +9,29 @@
 
 namespace Model\apiFootModel;
 
+use Model\dataModel;
+
 class apiFootModel
 {
     private $url = 'http://api.football-api.com/2.0/';
 
-    private $authorization = '565eaa22251f932b9f000001d50aaf0b55c7477c5ffcdbaf113ebbda';
+    private $authorization;
+
+    /**
+     * apiFootModel constructor.
+     * get the api key from database
+     */
+
+    public function __construct()
+    {
+        $dataModel = new \Model\dataModel\dataModel();
+        $apiKey = $dataModel->getApiKey();
+        if(!$apiKey){
+            $apiKey = $dataModel->getDefaultApiKey();
+        }
+        $this->authorization = $apiKey->meta_value;
+
+    }
 
     /**
      * get all competitions
@@ -93,11 +111,9 @@ class apiFootModel
         $jsonDecode = json_decode($data);
 
         if(isset($jsonDecode->status) && $jsonDecode->status == 'error'){
-            var_dump($jsonDecode->message);
             return $jsonDecode->message;
         }
 
-        var_dump($jsonDecode);
         return $jsonDecode;
     }
 

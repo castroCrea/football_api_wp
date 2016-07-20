@@ -7,25 +7,40 @@
  * Time: 11:32
  */
 
-//TODO : Match in database create data base , update and insert
-//TODO : Remove FROM database old update entries more than a year
-//TODO : button to update in function of the query string choosen
-//TODO : Option table for api, with the key and the ip for the cron
-//TODO : create token to update all and add to admin part
-//TODO : create template to the render of the pages
-//TODO : create standing in function of competition
+//TODO : Remove FROM database old update entries more than a year voir erreur
+//TODO : create standing template in function of competition
 //TODO : Match create match in function of day and competition
+//TODO : update button try a ajax to have a return 'update complet'
 
 namespace Model\dataModel;
 
 use Model\apiFootModel;
 
+
+/**
+ * Class dataModel
+ * @package Model\dataModel
+ *
+ * table :
+ *      option_api_foot
+ *      competition
+ *      standing
+ *      team
+ *      match
+ */
+
 class dataModel
 {
 
     /**
-     * create Competiton Tale
-     * if you want to add a colum just add here and update with the good query
+     * Default api key use to try before to get the buying api key
+     * @var string
+     */
+    private $defaultapiKey = '565eaa22251f932b9f000001d50aaf0b55c7477c5ffcdbaf113ebbda';
+
+    /**
+     * create Option Table
+     * if you want to add a column just add here and update with the good query
      */
     public function createCompetitionTable()
     {
@@ -40,6 +55,8 @@ class dataModel
                 name varchar(255) NOT NULL,
                 region varchar(255),
                 status tinyint(1) DEFAULT 0 NOT NULL,
+                date_from varchar(255) DEFAULT NULL,
+                date_to varchar(255) DEFAULT NULL,
                 last_update int(11) DEFAULT NULL,
                 UNIQUE KEY id (id)
             ) $charset_collate;";
@@ -49,8 +66,82 @@ class dataModel
     }
 
     /**
+     * create Match Table
+     * if you want to add a column just add here and update with the good query
+     */
+    public function createMatchTable()
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . "match";
+
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE $table_name (
+                id int(11) NOT NULL AUTO_INCREMENT,
+                comp_id mediumint(9) NOT NULL,
+                formatted_date varchar(10) NOT NULL,
+                season VARCHAR(10) DEFAULT NULL,
+                week int(4) DEFAULT NULL,
+                venue VARCHAR(60) DEFAULT NULL,
+                time VARCHAR(6) DEFAULT NULL,
+                localteam_id mediumint(9) DEFAULT NULL,
+                visitorteam_id mediumint(9) DEFAULT NULL,
+                localteam_name VARCHAR(60) DEFAULT NULL,
+                visitorteam_name VARCHAR(60) DEFAULT NULL,
+                localteam_score tinyint(2) DEFAULT NULL,
+                visitorteam_score tinyint(2) DEFAULT NULL,
+                ht_score varchar(10) DEFAULT NULL,
+                ft_score varchar(10) DEFAULT NULL,
+                et_score varchar(10) DEFAULT NULL,
+                penalty_local tinyint(2) DEFAULT NULL,
+                penalty_visitor tinyint(2) DEFAULT NULL,
+                events text DEFAULT NULL,
+                last_update int(11) DEFAULT NULL,
+                UNIQUE KEY id (id)
+            ) $charset_collate;";
+
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+        dbDelta( $sql );
+    }
+
+    /**
+     * create Competiton Table
+     * if you want to add a column just add here and update with the good query
+     */
+    public function createOptionApiTable()
+    {
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . "option_api_foot";
+
+        $charset_collate = $wpdb->get_charset_collate();
+
+        $sql = "CREATE TABLE $table_name (
+                id mediumint(9) NOT NULL AUTO_INCREMENT,
+                meta_name varchar(255) NOT NULL,
+                id_ref mediumint(9) DEFAULT NULL,
+                meta_value varchar(255) NOT NULL,
+                last_update int(11) DEFAULT NULL,
+                UNIQUE KEY id (id)
+            ) $charset_collate;";
+
+        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+        dbDelta( $sql );
+
+        /**
+         * Look if the table is empty, if is empty set the default apikey and token
+         */
+        $result = $wpdb->get_results('SELECT * FROM '. $table_name);
+
+        if($result == null){
+            $this->insertDefault();
+        }
+    }
+
+    /**
      * create Standing Table
-     * if you want to add a colum just add here and update with the good query
+     * if you want to add a column just add here and update with the good query
      */
     public function createStandingTable(){
         global $wpdb;
@@ -85,7 +176,7 @@ class dataModel
 
     /**
      * create Team Table
-     * if you want to add a colum just add here and update with the good query
+     * if you want to add a column just add here and update with the good query
      */
     public function createTeamTable(){
         global $wpdb;
@@ -149,6 +240,128 @@ class dataModel
     }
 
     /**
+     * Insert a Default Apikey witch is a test apikey from football-api.com documentation
+     * Insert Token use to refresh the page vie a button
+     */
+    private function insertDefault(){
+
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'option_api_foot';
+
+        /**
+         * insert api key default
+         */
+        $wpdb->insert(
+            $table_name,
+            array(
+                'meta_name' => 'api_key_default',
+                'meta_value' => $this->defaultapiKey,
+                'last_update' => time(),
+            )
+        );
+
+        /**
+         * insert token
+         */
+        $wpdb->insert(
+            $table_name,
+            array(
+                'meta_name' => 'token',
+                'meta_value' => bin2hex(random_bytes(43)),
+                'last_update' => time(),
+            )
+        );
+
+    }
+
+    /**
+     * update match of all selected competition
+     * @return bool
+     */
+    public function insertUpdateMatch(){
+
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'match';
+
+        $competitions = $this->getAllCompetitionsFromDB(false, 1);
+
+        $apiFoot = new \Model\apiFootModel\apiFootModel();
+
+        foreach($competitions as $oneCompetition){
+
+            $competition_id = $oneCompetition->id;
+
+            $matchs = $apiFoot->getMatch($competition_id, null, null, $oneCompetition->date_from, $oneCompetition->date_to);
+
+//           echo '<pre>';
+//           var_dump($matchs);
+//           echo '</pre>';
+//            die();
+
+            foreach($matchs as $oneMatch){
+
+                $matchVerif = $this->getMatchById($oneMatch->comp_id, $oneMatch->id);
+
+                if(!$matchVerif){
+                    $result = $wpdb->insert(
+                        $table_name,
+                        array(
+                            'id' => $oneMatch->id,
+                            'comp_id' => $oneMatch->comp_id,
+                            'formatted_date' => strtotime(str_replace('.','-',$oneMatch->formatted_date)),
+                            'season' => $oneMatch->season,
+                            'week' => $oneMatch->week,
+                            'venue' => $oneMatch->venue,
+                            'time' => $oneMatch->time,
+                            'localteam_id' => $oneMatch->localteam_id,
+                            'visitorteam_id' => $oneMatch->visitorteam_id,
+                            'localteam_name' => $oneMatch->localteam_name,
+                            'visitorteam_name' => $oneMatch->visitorteam_name,
+                            'localteam_score' => $oneMatch->localteam_score,
+                            'visitorteam_score' => $oneMatch->visitorteam_score,
+                            'ht_score' => $oneMatch->ht_score,
+                            'ft_score' => $oneMatch->ft_score,
+                            'et_score' => $oneMatch->et_score,
+                            'penalty_local' => $oneMatch->penalty_local,
+                            'penalty_visitor' => $oneMatch->penalty_visitor,
+                            'events' => json_encode($oneMatch->events),
+                            'last_update' => time(),
+                        )
+                    );
+                }else{
+                    $wpdb->update(
+                        $table_name,
+                        array(
+                            'comp_id' => $oneMatch->comp_id,
+                            'formatted_date' => strtotime(str_replace('.','-',$oneMatch->formatted_date)),
+                            'season' => $oneMatch->season,
+                            'week' => $oneMatch->week,
+                            'venue' => $oneMatch->venue,
+                            'time' => $oneMatch->time,
+                            'localteam_id' => $oneMatch->localteam_id,
+                            'visitorteam_id' => $oneMatch->visitorteam_id,
+                            'localteam_name' => $oneMatch->localteam_name,
+                            'visitorteam_name' => $oneMatch->visitorteam_name,
+                            'localteam_score' => $oneMatch->localteam_score,
+                            'visitorteam_score' => $oneMatch->visitorteam_score,
+                            'ht_score' => $oneMatch->ht_score,
+                            'ft_score' => $oneMatch->ft_score,
+                            'et_score' => $oneMatch->et_score,
+                            'penalty_local' => $oneMatch->penalty_local,
+                            'penalty_visitor' => $oneMatch->penalty_visitor,
+                            'events' => json_encode($oneMatch->events),
+                            'last_update' => time(),
+                        ),
+                        array( 'id' => $matchVerif->id )
+                    );
+                }
+            }
+        }
+    }
+
+    /**
      * Insert and update a standing
      */
     public function insertUpdateStanding(){
@@ -158,15 +371,6 @@ class dataModel
         $table_name = $wpdb->prefix . 'standing';
 
         $competitions = $this->getAllCompetitionsFromDB(false, 1);
-
-        /**
-         * if the table doesn't exist i create it, insert the competition and get the competition with status 1 (normaly the are all set to 0)
-         */
-        if(!$competitions){
-            $this->createCompetitionTable();
-            $this->insertCompetition();
-            return false;
-        }
 
         $apiFoot = new \Model\apiFootModel\apiFootModel();
 
@@ -201,7 +405,6 @@ class dataModel
                         )
                     );
                 }else{
-                    var_dump(time());
                     $wpdb->update(
                         $table_name,
                         array(
@@ -216,12 +419,9 @@ class dataModel
                             'overall_l' => $team->overall_l,
                             'gd' => $team->gd,
                             'season' => $team->season,
-                            'last_update' => time(),	// integer
+                            'last_update' => time(),
                         ),
-                        array( 'id' => $teamVerif->id ),
-                        array(
-                            '%d'	// value2
-                        )
+                        array( 'id' => $teamVerif->id )
                     );
                 }
             }
@@ -238,15 +438,6 @@ class dataModel
         $table_name = $wpdb->prefix . 'team';
 
         $allStanding = $this->getStandingFromDb();
-
-        /**
-         * if the table doesn't exist i create it, insert the competition and get the competition with status 1 (normaly the are all set to 0)
-         */
-        if(!$allStanding){
-            $this->createCompetitionTable();
-            $this->insertCompetition();
-            return false;
-        }
 
         $apiFoot = new \Model\apiFootModel\apiFootModel();
 
@@ -325,8 +516,26 @@ class dataModel
                  */
                 $this->createCompetitionTable();
                 $this->insertCompetition();
-                $this->getAllCompetitionsFromDB(true);
+                $this->getAllCompetitionsFromDB(true, $status);
             }
+        }
+        return false;
+    }
+
+    /**
+     * get the key of the api
+     * @return bool
+     */
+
+    public function getApiKey(){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'option_api_foot';
+
+        $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE meta_name = "api_key"');
+
+        if($competition != null){
+            return $competition;
         }
         return false;
     }
@@ -350,6 +559,29 @@ class dataModel
         }
         return false;
     }
+
+    /**
+     * get the key of the api
+     * @return bool
+     */
+
+    public function getDefaultApiKey(){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'option_api_foot';
+
+        $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE meta_name = "api_key_default"');
+
+        if($competition != null){
+            return $competition;
+        }
+        return false;
+    }
+
+    /**
+     * get all standing from the data base
+     * @return bool
+     */
 
     public function getStandingFromDb(){
         global $wpdb;
@@ -386,6 +618,27 @@ class dataModel
     }
 
     /**
+     * get the match, mostly use to update the match table
+     * @param $competition_id
+     * @param $team_id
+     * @return bool
+     */
+    private function getMatchById($competition_id, $match_id){
+        if(is_numeric($match_id) && is_numeric($competition_id)){
+            global $wpdb;
+
+            $table_name = $wpdb->prefix . 'match';
+
+            $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE comp_id =' . $competition_id .' AND id = ' . $match_id);
+
+            if($competition != null){
+                return $competition;
+            }
+        }
+        return false;
+    }
+
+    /**
      * get the team
      * @param $competition_id
      * @param $team_id
@@ -406,14 +659,120 @@ class dataModel
         return false;
     }
 
+    public function getToken(){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'option_api_foot';
+
+        $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE meta_name = "token"');
+
+        if($competition != null){
+            return $competition;
+        }
+    }
+
+    /**
+     * Remove old entries, older than a years
+     */
+    public function removeOldEntries(){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'match';
+
+        $deletTime = time() + (3600*24*365*2);
+
+        $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE formatted_date < '.$deletTime);
+
+        $wpdb->query($sql);
+
+        $table_name = $wpdb->prefix . 'standing';
+
+        $currentYear = intval(date("Y"));
+
+        $seasonToRemove = ($currentYear - 2).'/'.($currentYear - 1);
+
+        $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE season = '.$seasonToRemove);
+
+        $wpdb->query($sql);
+
+
+    }
+
+    /**
+     * reset the status value at zero of all competition, use to refresh the status
+     */
+    public function resetCompetitionToZero(){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'competition';
+
+        $competition = $wpdb->get_results('SELECT * FROM '. $table_name);
+
+        foreach($competition as $oneCompetition){
+            $wpdb->update(
+                $table_name,
+                array(
+                    'date_from' => NULL,	// integer
+                    'date_to' => NULL,	// integer
+                    'status' => 0,	// integer
+                    'last_update' => time(),
+                ),
+                array( 'id' => $oneCompetition->id )
+            );
+        }
+    }
+
+    /**
+     * Update the apiKey
+     * @param $id
+     * @param $status
+     */
+    public function updateApiKey($apiKey){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'option_api_foot';
+
+        /**
+         * get the apikey from the database
+         */
+            $apiKeyBd = $this->getApiKey();
+
+            $apiKey = htmlentities($apiKey);
+
+        /**
+         * if no api key insert else update
+         */
+        if(!$apiKeyBd){
+            $wpdb->insert(
+                $table_name,
+                array(
+                    'meta_name' => 'api_key',
+                    'meta_value' => $apiKey,	// integer
+                    'last_update' => time(),
+                )
+            );
+        }else{
+            $wpdb->update(
+                $table_name,
+                array(
+                    'meta_value' => $apiKey,
+                    'last_update' => time(),
+                ),
+                array( 'id' => $apiKeyBd->id )
+            );
+        }
+    }
+
     /**
      * Update the status of a competition
      * @param $id
      * @param $status
      */
+    public function updateCompetitionStatus($id, $status, $dateFrom, $dateTo){
+        if(is_numeric($id) && is_numeric($status) && $dateFrom != null && $dateTo != null){
 
-    public function updateCompetitionStatus($id, $status){
-        if(is_numeric($id) && is_numeric($status)){
+            $dateFrom = htmlentities($dateFrom);
+            $dateTo = htmlentities($dateTo);
 
             global $wpdb;
 
@@ -422,13 +781,12 @@ class dataModel
             $id_return = $wpdb->update(
                 $table_name,
                 array(
-                    'status' => $status,	// integer
-                    'last_update' => time(),	// integer
+                    'status' => $status,
+                    'date_from' => $dateFrom,
+                    'date_to' => $dateTo,
+                    'last_update' => time(),
                 ),
-                array( 'id' => $id ),
-                array(
-                    '%d'	// value2
-                )
+                array( 'id' => $id )
             );
             if(is_numeric($id_return)){
                 return true;
