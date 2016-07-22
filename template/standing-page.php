@@ -12,9 +12,9 @@ $actual_link = "http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
     <ul>
         <?php foreach($competitions as $oneCompetition): ?>
             <?php if($comp_id == $oneCompetition->id): ?>
-                <li class="competition selected" data-id="<?php echo $oneCompetition->id ?>"><a href="#"><?php echo $oneCompetition->name ?></a></li>
+                <li class="competition selected"><a href="#" data-id="<?php echo $oneCompetition->id ?>"><?php echo $oneCompetition->name ?></a></li>
             <?php else : ?>
-                <li class="competition" data-id="<?php echo $oneCompetition->id ?>"><a href="#"><?php echo $oneCompetition->name ?></a></li>
+                <li class="competition"><a href="#" data-id="<?php echo $oneCompetition->id ?>"><?php echo $oneCompetition->name ?></a></li>
             <?php endif ?>
         <?php endforeach; ?>
     </ul>
@@ -84,7 +84,7 @@ $actual_link = "http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
 
 </div>
     <script async>
-        jQuery('#StandingTable').on('click', '.competition', function(e){
+        jQuery('#StandingTable').on('click', '.competition a', function(e){
                 e.preventDefault();
                 var comp_id = jQuery(this).data('id');
                 ajax(comp_id);

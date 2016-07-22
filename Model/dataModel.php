@@ -531,7 +531,7 @@ class dataModel
      * @return bool|array
      */
 
-    public function getAllMatchFormCompIdAndDay($comp_id){
+    public function getAllMatchFormCompIdAndDay($comp_id, $week = null){
         if(is_numeric($comp_id)){
             global $wpdb;
 
@@ -540,15 +540,23 @@ class dataModel
 
             $season = $this->getSeasonFromCompId($comp_id);
 
-            $week = $this->getCurrentWeek($comp_id);
-            if(!$week){
-                return false;
+            if($week === null){
+                $week = $this->getCurrentWeek($comp_id);
+                if($week === false){
+                    return false;
+                }
             }
 
-            $matchs = $wpdb->get_results('SELECT m.id, m.week, m.time, m.formatted_date, m.season, m.localteam_score, m.visitorteam_score, m.et_score, m.penalty_local, m.penalty_visitor, t1.name as localteam_name, t1.image as localteam_image, t2.name as visitorteam_name, t2.image as visitorteam_image FROM '. $table_name . ' AS m CROSS JOIN '.$join_name.' as t1 ON m.localteam_id = t1.id CROSS JOIN '.$join_name.' as t2 ON m.visitorteam_id = t2.id WHERE m.comp_id = ' . $comp_id . ' AND m.season = "'. $season .'" AND m.week = '.$week.' ORDER BY m.formatted_date');
+            if(is_numeric($week)){
 
-            if($matchs != null) {
-                return $matchs;
+                $matchs = $wpdb->get_results('SELECT m.id, m.week, m.time, m.formatted_date, m.season, m.localteam_score, m.visitorteam_score, m.et_score, m.penalty_local, m.penalty_visitor, t1.name as localteam_name, t1.image as localteam_image, t2.name as visitorteam_name, t2.image as visitorteam_image FROM '. $table_name . ' AS m JOIN '.$join_name.' as t1 ON m.localteam_id = t1.id JOIN '.$join_name.' as t2 ON m.visitorteam_id = t2.id WHERE m.comp_id = ' . $comp_id . ' AND m.season = "'. $season .'" AND m.week = '.$week.' ORDER BY m.formatted_date');
+
+    //            var_dump('SELECT m.id, m.week, m.time, m.formatted_date, m.season, m.localteam_score, m.visitorteam_score, m.et_score, m.penalty_local, m.penalty_visitor, t1.name as localteam_name, t1.image as localteam_image, t2.name as visitorteam_name, t2.image as visitorteam_image FROM '. $table_name . ' AS m CROSS JOIN '.$join_name.' as t1 ON m.localteam_id = t1.id CROSS JOIN '.$join_name.' as t2 ON m.visitorteam_id = t2.id WHERE m.comp_id = ' . $comp_id . ' AND m.season = "'. $season .'" AND m.week = '.$week.' ORDER BY m.formatted_date');
+
+                if($matchs != null) {
+                    return $matchs;
+                }
+
             }
 
             return false;
