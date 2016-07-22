@@ -7,6 +7,9 @@
  * Time: 11:32
  */
 
+//TODO : update button try a ajax to have a return 'update complete
+//TODO : button image
+
 use Model\apiFootModel;
 use Model\dataModel;
 
@@ -80,6 +83,13 @@ class apiFoot_admin
         if((isset($_GET['cleanDB']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['cleanDB']) && $_GET['token'] == $token->meta_value)){
             $this->cleanDB();
         }
+
+
+        if((isset($_POST['udateTeam']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_POST['udateTeam']) && $_GET['token'] == $token->meta_value)){
+            $this->crudBackOfficeTeam();
+            die();
+        }
+
         /**
          * create admin apifoot plugin page
          */
@@ -120,6 +130,16 @@ class apiFoot_admin
     }
 
     /**
+     * Create admin page
+     */
+    public function admin_apiFoot_setup_menu(){
+        add_menu_page( 'Api Foot Competition', 'Api Foot', 'manage_options', 'api-foot', array($this, 'admin_apiFoot_competition') );
+        add_submenu_page( 'api-foot', 'Api Foot Key', 'Api Foot Key', 'manage_options', 'api-key', array($this, 'admin_apiFoot_key') );
+        add_submenu_page( 'api-foot', 'Api Foot Update', 'Api Foot Update', 'manage_options', 'api-update', array($this, 'admin_apiFoot_update') );
+        add_submenu_page( 'api-foot', 'Api Foot Team Management', 'Api Foot Team Management', 'manage_options', 'api-team', array($this, 'teamManagement') );
+    }
+
+    /**
      * Administration page of apiFoot plugin
      */
     public function admin_apiFoot_update(){
@@ -130,12 +150,29 @@ class apiFoot_admin
     }
 
     /**
-     * Create admin page
+     * clean database from old entites
      */
-    public function admin_apiFoot_setup_menu(){
-        add_menu_page( 'Api Foot Competition', 'Api Foot', 'manage_options', 'api-foot', array($this, 'admin_apiFoot_competition') );
-        add_submenu_page( 'api-foot', 'Api Foot Key', 'Api Foot Key', 'manage_options', 'api-key', array($this, 'admin_apiFoot_key') );
-        add_submenu_page( 'api-foot', 'Api Foot Update', 'Api Foot Update', 'manage_options', 'api-update', array($this, 'admin_apiFoot_update') );
+    public function cleanDB(){
+        $dataModel = new \Model\dataModel\dataModel();
+        $dataModel->removeOldEntries();
+    }
+
+
+    /**
+     * call for the ajax to update name and image form back office
+     */
+    public function crudBackOfficeTeam(){
+        $dataModel = new \Model\dataModel\dataModel();
+        $dataModel->updateTeam($_POST);
+    }
+
+    /**
+     * Page management teams as change name or add images
+     */
+    public function teamManagement(){
+        $dataModel = new \Model\dataModel\dataModel();
+        $teams = $dataModel->getAllTeam();
+        include_once (__DIR__.'/../template/admin-team-management.php');
     }
 
     /**
@@ -156,16 +193,8 @@ class apiFoot_admin
         foreach($_POST['competition'] as $competition_id){
             $dateFrom = $_POST['date_from'][$competition_id];
             $dateTo = $_POST['date_to'][$competition_id];
-            $dataModel->updateCompetitionStatus($competition_id, 1, $dateFrom, $dateTo);
+            $classement = $_POST['classement'][$competition_id];
+            $dataModel->updateCompetitionStatus($competition_id, 1, $dateFrom, $dateTo, $classement);
         }
     }
-
-    /**
-     * clean database from old entites
-     */
-    public function cleanDB(){
-        $dataModel = new \Model\dataModel\dataModel();
-        $dataModel->removeOldEntries();
-    }
-
 }

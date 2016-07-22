@@ -7,11 +7,6 @@
  * Time: 11:32
  */
 
-//TODO : Remove FROM database old update entries more than a year voir erreur
-//TODO : create standing template in function of competition
-//TODO : Match create match in function of day and competition
-//TODO : update button try a ajax to have a return 'update complet'
-
 namespace Model\dataModel;
 
 use Model\apiFootModel;
@@ -53,6 +48,8 @@ class dataModel
         $sql = "CREATE TABLE $table_name (
                 id mediumint(9) NOT NULL AUTO_INCREMENT,
                 name varchar(255) NOT NULL,
+                slug_name varchar(255) NOT NULL,
+                classement int(3) DEFAULT NULL,
                 region varchar(255),
                 status tinyint(1) DEFAULT 0 NOT NULL,
                 date_from varchar(255) DEFAULT NULL,
@@ -225,11 +222,15 @@ class dataModel
             $retour = $this->getCompetitionById($competition_id);
 
             if(!$retour){
+
+                $slug = str_replace(' ', '-', strtolower($oneCompetition->name));
+
                 $wpdb->insert(
                     $table_name,
                     array(
                         'id' => $competition_id,
                         'name' => $oneCompetition->name,
+                        'slug_name' => $slug,
                         'region' => $oneCompetition->region,
                         'status' => 0,
                         'last_update' => time(),
@@ -446,6 +447,7 @@ class dataModel
             $id_team = $standing->id_team;
 
             $teamVerif = $this->getTeamById($id_team);
+
             $team = $apiFoot->getTeam($id_team);
 
             if(!$teamVerif){
@@ -470,7 +472,10 @@ class dataModel
                 $wpdb->update(
                     $table_name,
                     array(
-                        'name' => $team->name,
+                        /**
+                         * we are modify by hand so we are not updating theme
+                         * 'name' => $team->name,
+                         */
                         'country' => $team->country,
                         'founded' => $team->founded,
                         'leagues' => $team->leagues,
@@ -482,10 +487,7 @@ class dataModel
                         'transfers_out' => json_encode($team->transfers_out),
                         'last_update' => time(),	// integer
                     ),
-                    array( 'id' => $teamVerif->id ),
-                    array(
-                        '%d'	// value2
-                    )
+                    array( 'id' => $teamVerif->id )
                 );
             }
         }
@@ -497,13 +499,12 @@ class dataModel
      * @return mixed|bool
      */
     public function getAllCompetitionsFromDB($i = false, $status = null){
-        if(!$i){
             global $wpdb;
 
             $table_name = $wpdb->prefix . 'competition';
 
             if(is_numeric($status)){
-                $competition = $wpdb->get_results('SELECT * FROM '. $table_name . ' WHERE status = ' . $status);
+                $competition = $wpdb->get_results('SELECT * FROM '. $table_name . ' WHERE status = ' . $status . ' ORDER BY classement');
             }else{
                 $competition = $wpdb->get_results('SELECT * FROM '. $table_name);
             }
@@ -511,22 +512,63 @@ class dataModel
             if($competition != null){
                 return $competition;
             }else{
+                if(!$i){
                 /**
                  * if there is not competiton we create data base, insert from api et do again this function
                  */
-                $this->createCompetitionTable();
-                $this->insertCompetition();
-                $this->getAllCompetitionsFromDB(true, $status);
+                    $this->createCompetitionTable();
+                    $this->insertCompetition();
+                    $this->getAllCompetitionsFromDB(true, $status);
+                }
             }
+        return false;
+    }
+
+    /**
+     * get all match from a competition
+     * @param $comp_id
+     * @return bool|array
+     */
+
+    public function getAllMatchFormCompId($comp_id){
+        if(is_numeric($comp_id)){
+            global $wpdb;
+
+            $table_name = $wpdb->prefix . 'match';
+            $inner_name = $wpdb->prefix . 'team';
+
+            $competition = $wpdb->get_results('SELECT * FROM '. $table_name . ' AS m INNER JOIN '.$inner_name.' as t1 ON m.localteam_id = t1.id  INNER JOIN '.$inner_name.' as t2 ON m.localteam_id = t2.id WHERE $comp_id = ' . $comp_id . ' ORDER BY week');
+
+            if($competition != null) {
+                return $competition;
+            }
+
+            return false;
         }
+    }
+
+    /**
+     * get all teams
+     * @return bool|array
+     */
+    public function getAllTeam(){
+            global $wpdb;
+
+            $table_name = $wpdb->prefix . 'team';
+
+            $competition = $wpdb->get_results('SELECT * FROM '. $table_name . ' ORDER BY '.$table_name.'.name');
+
+            if($competition != null) {
+                return $competition;
+            }
+
         return false;
     }
 
     /**
      * get the key of the api
-     * @return bool
+     * @return bool|array
      */
-
     public function getApiKey(){
         global $wpdb;
 
@@ -564,7 +606,6 @@ class dataModel
      * get the key of the api
      * @return bool
      */
-
     public function getDefaultApiKey(){
         global $wpdb;
 
@@ -582,7 +623,6 @@ class dataModel
      * get all standing from the data base
      * @return bool
      */
-
     public function getStandingFromDb(){
         global $wpdb;
 
@@ -592,6 +632,27 @@ class dataModel
 
         if($competition != null){
             return $competition;
+        }
+        return false;
+    }
+
+    /**
+     * get all standing from comp id
+     * @return bool
+     */
+    public function getStandingFromCompId($compiId){
+        if(is_numeric($compiId)){
+            global $wpdb;
+
+            $table_name = $wpdb->prefix . 'standing';
+            $inner_name = $wpdb->prefix . 'team';
+
+            $competition = $wpdb->get_results('SELECT position, status, '.$inner_name.'.image, '.$inner_name.'.name, point, round, overall_w, overall_d, overall_l, gd, comp_group  FROM '. $table_name . ' INNER JOIN '.$inner_name.' ON '.$table_name.'.id_team = '.$inner_name.'.id WHERE id_competition = '.$compiId . ' ORDER BY comp_group, '.$table_name.'.position');
+
+            if($competition != null){
+                return $competition;
+            }
+            return false;
         }
         return false;
     }
@@ -675,15 +736,23 @@ class dataModel
      * Remove old entries, older than a years
      */
     public function removeOldEntries(){
+        $deletTime = time() - (3600*24*365*2);
+
+        /**
+         * remove match
+         */
         global $wpdb;
 
         $table_name = $wpdb->prefix . 'match';
 
-        $deletTime = time() + (3600*24*365*2);
 
-        $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE formatted_date < '.$deletTime);
+        $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE formatted_date < %s', $deletTime);
 
         $wpdb->query($sql);
+
+        /**
+         * remove standing (classement)
+         */
 
         $table_name = $wpdb->prefix . 'standing';
 
@@ -691,10 +760,19 @@ class dataModel
 
         $seasonToRemove = ($currentYear - 2).'/'.($currentYear - 1);
 
-        $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE season = '.$seasonToRemove);
+        $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE season = %s', $seasonToRemove);
 
         $wpdb->query($sql);
 
+        /**
+         * remove team
+         */
+
+        $table_name = $wpdb->prefix . 'team';
+
+        $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE last_update < %s', $deletTime);
+
+        $wpdb->query($sql);
 
     }
 
@@ -768,8 +846,8 @@ class dataModel
      * @param $id
      * @param $status
      */
-    public function updateCompetitionStatus($id, $status, $dateFrom, $dateTo){
-        if(is_numeric($id) && is_numeric($status) && $dateFrom != null && $dateTo != null){
+    public function updateCompetitionStatus($id, $status, $dateFrom, $dateTo, $classement){
+        if(is_numeric($id) && is_numeric($status) && $dateFrom != null && $dateTo != null && is_numeric($classement)){
 
             $dateFrom = htmlentities($dateFrom);
             $dateTo = htmlentities($dateTo);
@@ -784,6 +862,7 @@ class dataModel
                     'status' => $status,
                     'date_from' => $dateFrom,
                     'date_to' => $dateTo,
+                    'classement' => $classement,
                     'last_update' => time(),
                 ),
                 array( 'id' => $id )
@@ -794,6 +873,55 @@ class dataModel
             return false;
         }
         return false;
+    }
+
+    /**
+     * update team form the back office
+     * @param $data
+     */
+    public function updateTeam($data){
+
+        $id = $data['teamId'];
+        $name = htmlentities($data['name']);
+        if(isset($data['image'])){
+            $image = htmlentities($data['image']);
+        }
+
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'team';
+
+        if(is_numeric($id) && $name != null && isset($image) && $image != null){
+
+            $id_return = $wpdb->update(
+                $table_name,
+                array(
+                    'name' => $name,
+                    'image' => $image,
+                    'last_update' => time(),
+                ),
+                array( 'id' => $id )
+            );
+            if(is_numeric($id_return)){
+                echo true;
+            }
+            echo false;
+        }elseif(is_numeric($id) && $name != null){
+
+            $id_return = $wpdb->update(
+                $table_name,
+                array(
+                    'name' => $name,
+                    'last_update' => time(),
+                ),
+                array( 'id' => $id )
+            );
+            if(is_numeric($id_return)){
+                echo true;
+            }
+            echo false;
+        }
+        echo false;
     }
 
 }

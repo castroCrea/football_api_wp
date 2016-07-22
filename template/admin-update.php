@@ -5,7 +5,7 @@
  * Date: 20/07/16
  * Time: 12:13
  */
-$actual_link = "http://$_SERVER[HTTP_HOST]$_SERVER[REQUEST_URI]";
+$actual_link = "http://$_SERVER[HTTP_HOST]$_SERVER[SCRIPT_NAME]?page=api-update";
 ?>
 
 <div style="background: white;padding: 20px;">
