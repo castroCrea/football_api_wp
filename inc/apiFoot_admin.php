@@ -116,6 +116,7 @@ class apiFoot_admin
         $dataModel = new \Model\dataModel\dataModel();
 
         $allCompetition = $dataModel->getAllCompetitionsFromDB();
+        $season = $dataModel->getSeason();
         include_once (__DIR__.'/../template/admin-competition.php');
     }
 
@@ -194,7 +195,8 @@ class apiFoot_admin
             $dateFrom = $_POST['date_from'][$competition_id];
             $dateTo = $_POST['date_to'][$competition_id];
             $classement = $_POST['classement'][$competition_id];
-            $dataModel->updateCompetitionStatus($competition_id, 1, $dateFrom, $dateTo, $classement);
+            $season = $_POST['season'][$competition_id];
+            $dataModel->updateCompetitionStatus($competition_id, 1, $dateFrom, $dateTo, $classement, $season);
         }
     }
 }

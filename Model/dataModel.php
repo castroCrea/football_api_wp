@@ -54,6 +54,7 @@ class dataModel
                 status tinyint(1) DEFAULT 0 NOT NULL,
                 date_from varchar(255) DEFAULT NULL,
                 date_to varchar(255) DEFAULT NULL,
+                season varchar(20) DEFAULT NULL,
                 last_update int(11) DEFAULT NULL,
                 UNIQUE KEY id (id)
             ) $charset_collate;";
@@ -530,17 +531,24 @@ class dataModel
      * @return bool|array
      */
 
-    public function getAllMatchFormCompId($comp_id){
+    public function getAllMatchFormCompIdAndDay($comp_id){
         if(is_numeric($comp_id)){
             global $wpdb;
 
             $table_name = $wpdb->prefix . 'match';
-            $inner_name = $wpdb->prefix . 'team';
+            $join_name = $wpdb->prefix . 'team';
 
-            $competition = $wpdb->get_results('SELECT * FROM '. $table_name . ' AS m INNER JOIN '.$inner_name.' as t1 ON m.localteam_id = t1.id  INNER JOIN '.$inner_name.' as t2 ON m.localteam_id = t2.id WHERE $comp_id = ' . $comp_id . ' ORDER BY week');
+            $season = $this->getSeasonFromCompId($comp_id);
 
-            if($competition != null) {
-                return $competition;
+            $week = $this->getCurrentWeek($comp_id);
+            if(!$week){
+                return false;
+            }
+
+            $matchs = $wpdb->get_results('SELECT m.id, m.week, m.time, m.formatted_date, m.season, m.localteam_score, m.visitorteam_score, m.et_score, m.penalty_local, m.penalty_visitor, t1.name as localteam_name, t1.image as localteam_image, t2.name as visitorteam_name, t2.image as visitorteam_image FROM '. $table_name . ' AS m CROSS JOIN '.$join_name.' as t1 ON m.localteam_id = t1.id CROSS JOIN '.$join_name.' as t2 ON m.visitorteam_id = t2.id WHERE m.comp_id = ' . $comp_id . ' AND m.season = "'. $season .'" AND m.week = '.$week.' ORDER BY m.formatted_date');
+
+            if($matchs != null) {
+                return $matchs;
             }
 
             return false;
@@ -556,10 +564,10 @@ class dataModel
 
             $table_name = $wpdb->prefix . 'team';
 
-            $competition = $wpdb->get_results('SELECT * FROM '. $table_name . ' ORDER BY '.$table_name.'.name');
+            $teams = $wpdb->get_results('SELECT * FROM '. $table_name . ' ORDER BY '.$table_name.'.name');
 
-            if($competition != null) {
-                return $competition;
+            if($teams != null) {
+                return $teams;
             }
 
         return false;
@@ -574,10 +582,10 @@ class dataModel
 
         $table_name = $wpdb->prefix . 'option_api_foot';
 
-        $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE meta_name = "api_key"');
+        $apiKey = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE meta_name = "api_key"');
 
-        if($competition != null){
-            return $competition;
+        if($apiKey != null){
+            return $apiKey;
         }
         return false;
     }
@@ -603,6 +611,54 @@ class dataModel
     }
 
     /**
+     * get current week for the matchs
+     * @param $compId
+     * @param null $season
+     * @return bool
+     */
+    public function getCurrentWeek($compId, $season = null){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'match';
+
+        if($season == null){
+            $season = $this->getSeasonFromCompId($compId);
+        }
+
+        $curentTimeStamp = time();
+
+        $week = $wpdb->get_results('SELECT * FROM '.$table_name.' AS m WHERE m.comp_id = '.$compId.' AND m.season = "'.$season.'" AND m.formatted_date >= '.$curentTimeStamp.' GROUP BY m.week ORDER BY m.week');
+
+        if($week != null){
+            return $week[0]->week;
+        }
+        return false;
+    }
+
+    /**
+     * get weeks of a competition
+     * @param $compId
+     * @param null $season
+     * @return bool
+     */
+    public function getWeeksOfComp($compId, $season = null){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'match';
+
+        if($season == null){
+            $season = $this->getSeasonFromCompId($compId);
+        }
+
+        $week = $wpdb->get_results('SELECT * FROM '.$table_name.' AS m WHERE m.comp_id = '.$compId.' AND m.season = "'.$season.'" GROUP BY m.week ORDER BY m.week');
+
+        if($week != null){
+            return $week;
+        }
+        return false;
+    }
+
+    /**
      * get the key of the api
      * @return bool
      */
@@ -611,10 +667,10 @@ class dataModel
 
         $table_name = $wpdb->prefix . 'option_api_foot';
 
-        $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE meta_name = "api_key_default"');
+        $defaultApiKey = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE meta_name = "api_key_default"');
 
-        if($competition != null){
-            return $competition;
+        if($defaultApiKey != null){
+            return $defaultApiKey;
         }
         return false;
     }
@@ -628,29 +684,70 @@ class dataModel
 
         $table_name = $wpdb->prefix . 'standing';
 
-        $competition = $wpdb->get_results('SELECT * FROM '. $table_name);
+        $standing = $wpdb->get_results('SELECT * FROM '. $table_name);
 
-        if($competition != null){
-            return $competition;
+        if($standing != null){
+            return $standing;
         }
         return false;
+    }
+
+    /**
+     * get all season available from the standing table
+     * @return bool
+     */
+    public function getSeason(){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'standing';
+
+        $season = $wpdb->get_results('SELECT season FROM '. $table_name .' GROUP BY season');
+
+        if($season != null){
+            return $season;
+        }
+        return false;
+    }
+
+    /**
+     * get all season available from the standing table
+     * @return bool
+     */
+    private function getSeasonFromCompId($compId){
+        if(is_numeric($compId)) {
+            global $wpdb;
+
+            $table_name = $wpdb->prefix . 'competition';
+
+            $season = $wpdb->get_row('SELECT season FROM ' . $table_name . ' WHERE id = ' . $compId);
+
+            if ($season != null) {
+                return $season->season;
+            }
+            return false;
+        }
     }
 
     /**
      * get all standing from comp id
      * @return bool
      */
-    public function getStandingFromCompId($compiId){
-        if(is_numeric($compiId)){
+    public function getStandingFromCompId($compId){
+        if(is_numeric($compId)){
             global $wpdb;
 
             $table_name = $wpdb->prefix . 'standing';
             $inner_name = $wpdb->prefix . 'team';
 
-            $competition = $wpdb->get_results('SELECT position, status, '.$inner_name.'.image, '.$inner_name.'.name, point, round, overall_w, overall_d, overall_l, gd, comp_group  FROM '. $table_name . ' INNER JOIN '.$inner_name.' ON '.$table_name.'.id_team = '.$inner_name.'.id WHERE id_competition = '.$compiId . ' ORDER BY comp_group, '.$table_name.'.position');
+            /**
+             * get only form the season selected in the back Office
+             */
+            $season = $this->getSeasonFromCompId($compId);
 
-            if($competition != null){
-                return $competition;
+            $standing = $wpdb->get_results('SELECT position, status, '.$inner_name.'.image, '.$inner_name.'.name, point, round, overall_w, overall_d, overall_l, gd, comp_group  FROM '. $table_name . ' INNER JOIN '.$inner_name.' ON '.$table_name.'.id_team = '.$inner_name.'.id WHERE id_competition = '.$compId . ' AND season = "'. $season .'" ORDER BY comp_group, '.$table_name.'.position');
+
+            if($standing != null){
+                return $standing;
             }
             return false;
         }
@@ -669,10 +766,10 @@ class dataModel
 
             $table_name = $wpdb->prefix . 'standing';
 
-            $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE id_competition =' . $competition_id .' AND id_team = ' . $team_id);
+            $standing = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE id_competition =' . $competition_id .' AND id_team = ' . $team_id);
 
-            if($competition != null){
-                return $competition;
+            if($standing != null){
+                return $standing;
             }
         }
         return false;
@@ -690,10 +787,10 @@ class dataModel
 
             $table_name = $wpdb->prefix . 'match';
 
-            $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE comp_id =' . $competition_id .' AND id = ' . $match_id);
+            $matchs = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE comp_id =' . $competition_id .' AND id = ' . $match_id);
 
-            if($competition != null){
-                return $competition;
+            if($matchs != null){
+                return $matchs;
             }
         }
         return false;
@@ -711,10 +808,10 @@ class dataModel
 
             $table_name = $wpdb->prefix . 'team';
 
-            $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE id = '. $team_id);
+            $team = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE id = '. $team_id);
 
-            if($competition != null){
-                return $competition;
+            if($team != null){
+                return $team;
             }
         }
         return false;
@@ -725,10 +822,10 @@ class dataModel
 
         $table_name = $wpdb->prefix . 'option_api_foot';
 
-        $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE meta_name = "token"');
+        $token = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE meta_name = "token"');
 
-        if($competition != null){
-            return $competition;
+        if($token != null){
+            return $token;
         }
     }
 
@@ -755,6 +852,7 @@ class dataModel
          */
 
         $table_name = $wpdb->prefix . 'standing';
+
 
         $currentYear = intval(date("Y"));
 
@@ -790,9 +888,10 @@ class dataModel
             $wpdb->update(
                 $table_name,
                 array(
-                    'date_from' => NULL,	// integer
-                    'date_to' => NULL,	// integer
-                    'status' => 0,	// integer
+                    'date_from' => NULL,
+                    'date_to' => NULL,
+                    'status' => 0,
+                    'season' => NULL,
                     'last_update' => time(),
                 ),
                 array( 'id' => $oneCompetition->id )
@@ -846,8 +945,8 @@ class dataModel
      * @param $id
      * @param $status
      */
-    public function updateCompetitionStatus($id, $status, $dateFrom, $dateTo, $classement){
-        if(is_numeric($id) && is_numeric($status) && $dateFrom != null && $dateTo != null && is_numeric($classement)){
+    public function updateCompetitionStatus($id, $status, $dateFrom, $dateTo, $classement, $season){
+        if(is_numeric($id) && is_numeric($status) && $dateFrom != null && $dateTo != null && $season != null && is_numeric($classement)){
 
             $dateFrom = htmlentities($dateFrom);
             $dateTo = htmlentities($dateTo);
@@ -863,6 +962,7 @@ class dataModel
                     'date_from' => $dateFrom,
                     'date_to' => $dateTo,
                     'classement' => $classement,
+                    'season' => $season,
                     'last_update' => time(),
                 ),
                 array( 'id' => $id )

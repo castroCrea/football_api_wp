@@ -44,7 +44,7 @@ class apiFoot_client
 
         $standing = $dataModel->getStandingFromCompId($comp_id);
 
-        include_once (__DIR__.'/../template/standing.php');
+        include_once (__DIR__.'/../template/standing-page.php');
     }
 
     public function getMatchPage(){
@@ -64,8 +64,14 @@ class apiFoot_client
             $comp_id = $competitions[0]->id;
         }
 
-        $standing = $dataModel->getStandingFromCompId($comp_id);
+        $weeks = $dataModel->getWeeksOfComp($comp_id);
+        $currentWeek = $dataModel->getCurrentWeek($comp_id);
 
-        include_once (__DIR__.'/../template/match.php');
+        $allMatch = $dataModel->getAllMatchFormCompIdAndDay($comp_id);
+
+        echo '<pre>';
+        var_dump($allMatch);
+
+        include_once (__DIR__.'/../template/match-page.php');
     }
 }
