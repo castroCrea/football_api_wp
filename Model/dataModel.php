@@ -205,7 +205,7 @@ class dataModel
     }
 
     /**
-     * Insert a competition
+     * Insert and update a competition
      */
     public function insertCompetition(){
 
@@ -226,7 +226,7 @@ class dataModel
 
                 $slug = str_replace(' ', '-', strtolower($oneCompetition->name));
 
-                $wpdb->insert(
+                $result = $wpdb->insert(
                     $table_name,
                     array(
                         'id' => $competition_id,
@@ -237,8 +237,27 @@ class dataModel
                         'last_update' => time(),
                     )
                 );
+            }else{
+                $slug = str_replace(' ', '-', strtolower($oneCompetition->name));
+
+                $result = $wpdb->update(
+                    $table_name,
+                    array(
+                        'name' => $oneCompetition->name,
+                        'slug_name' => $slug,
+                        'region' => $oneCompetition->region,
+                        'status' => 0,
+                        'last_update' => time(),
+                    ),
+                    array( 'id' => $retour->id )
+                );
+
             }
         }
+        if(is_numeric($result)){
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -291,76 +310,81 @@ class dataModel
 
         $apiFoot = new \Model\apiFootModel\apiFootModel();
 
-        foreach($competitions as $oneCompetition){
+        if($competitions != false){
 
-            $competition_id = $oneCompetition->id;
+            foreach($competitions as $oneCompetition){
 
-            $matchs = $apiFoot->getMatch($competition_id, null, null, $oneCompetition->date_from, $oneCompetition->date_to);
+                $competition_id = $oneCompetition->id;
 
-//           echo '<pre>';
-//           var_dump($matchs);
-//           echo '</pre>';
-//            die();
+                $matchs = $apiFoot->getMatch($competition_id, null, null, $oneCompetition->date_from, $oneCompetition->date_to);
 
-            foreach($matchs as $oneMatch){
+    //           echo '<pre>';
+    //           var_dump($matchs);
+    //           echo '</pre>';
+    //            die();
 
-                $matchVerif = $this->getMatchById($oneMatch->comp_id, $oneMatch->id);
+                foreach($matchs as $oneMatch){
 
-                if(!$matchVerif){
-                    $result = $wpdb->insert(
-                        $table_name,
-                        array(
-                            'id' => $oneMatch->id,
-                            'comp_id' => $oneMatch->comp_id,
-                            'formatted_date' => strtotime(str_replace('.','-',$oneMatch->formatted_date)),
-                            'season' => $oneMatch->season,
-                            'week' => $oneMatch->week,
-                            'venue' => $oneMatch->venue,
-                            'time' => $oneMatch->time,
-                            'localteam_id' => $oneMatch->localteam_id,
-                            'visitorteam_id' => $oneMatch->visitorteam_id,
-                            'localteam_name' => $oneMatch->localteam_name,
-                            'visitorteam_name' => $oneMatch->visitorteam_name,
-                            'localteam_score' => $oneMatch->localteam_score,
-                            'visitorteam_score' => $oneMatch->visitorteam_score,
-                            'ht_score' => $oneMatch->ht_score,
-                            'ft_score' => $oneMatch->ft_score,
-                            'et_score' => $oneMatch->et_score,
-                            'penalty_local' => $oneMatch->penalty_local,
-                            'penalty_visitor' => $oneMatch->penalty_visitor,
-                            'events' => json_encode($oneMatch->events),
-                            'last_update' => time(),
-                        )
-                    );
-                }else{
-                    $wpdb->update(
-                        $table_name,
-                        array(
-                            'comp_id' => $oneMatch->comp_id,
-                            'formatted_date' => strtotime(str_replace('.','-',$oneMatch->formatted_date)),
-                            'season' => $oneMatch->season,
-                            'week' => $oneMatch->week,
-                            'venue' => $oneMatch->venue,
-                            'time' => $oneMatch->time,
-                            'localteam_id' => $oneMatch->localteam_id,
-                            'visitorteam_id' => $oneMatch->visitorteam_id,
-                            'localteam_name' => $oneMatch->localteam_name,
-                            'visitorteam_name' => $oneMatch->visitorteam_name,
-                            'localteam_score' => $oneMatch->localteam_score,
-                            'visitorteam_score' => $oneMatch->visitorteam_score,
-                            'ht_score' => $oneMatch->ht_score,
-                            'ft_score' => $oneMatch->ft_score,
-                            'et_score' => $oneMatch->et_score,
-                            'penalty_local' => $oneMatch->penalty_local,
-                            'penalty_visitor' => $oneMatch->penalty_visitor,
-                            'events' => json_encode($oneMatch->events),
-                            'last_update' => time(),
-                        ),
-                        array( 'id' => $matchVerif->id )
-                    );
+                    $matchVerif = $this->getMatchById($oneMatch->comp_id, $oneMatch->id);
+
+                    if(!$matchVerif){
+                        $result = $wpdb->insert(
+                            $table_name,
+                            array(
+                                'id' => $oneMatch->id,
+                                'comp_id' => $oneMatch->comp_id,
+                                'formatted_date' => strtotime(str_replace('.','-',$oneMatch->formatted_date)),
+                                'season' => $oneMatch->season,
+                                'week' => $oneMatch->week,
+                                'venue' => $oneMatch->venue,
+                                'time' => $oneMatch->time,
+                                'localteam_id' => $oneMatch->localteam_id,
+                                'visitorteam_id' => $oneMatch->visitorteam_id,
+                                'localteam_name' => $oneMatch->localteam_name,
+                                'visitorteam_name' => $oneMatch->visitorteam_name,
+                                'localteam_score' => $oneMatch->localteam_score,
+                                'visitorteam_score' => $oneMatch->visitorteam_score,
+                                'ht_score' => $oneMatch->ht_score,
+                                'ft_score' => $oneMatch->ft_score,
+                                'et_score' => $oneMatch->et_score,
+                                'penalty_local' => $oneMatch->penalty_local,
+                                'penalty_visitor' => $oneMatch->penalty_visitor,
+                                'events' => json_encode($oneMatch->events),
+                                'last_update' => time(),
+                            )
+                        );
+                    }else{
+                        $wpdb->update(
+                            $table_name,
+                            array(
+                                'comp_id' => $oneMatch->comp_id,
+                                'formatted_date' => strtotime(str_replace('.','-',$oneMatch->formatted_date)),
+                                'season' => $oneMatch->season,
+                                'week' => $oneMatch->week,
+                                'venue' => $oneMatch->venue,
+                                'time' => $oneMatch->time,
+                                'localteam_id' => $oneMatch->localteam_id,
+                                'visitorteam_id' => $oneMatch->visitorteam_id,
+                                'localteam_name' => $oneMatch->localteam_name,
+                                'visitorteam_name' => $oneMatch->visitorteam_name,
+                                'localteam_score' => $oneMatch->localteam_score,
+                                'visitorteam_score' => $oneMatch->visitorteam_score,
+                                'ht_score' => $oneMatch->ht_score,
+                                'ft_score' => $oneMatch->ft_score,
+                                'et_score' => $oneMatch->et_score,
+                                'penalty_local' => $oneMatch->penalty_local,
+                                'penalty_visitor' => $oneMatch->penalty_visitor,
+                                'events' => json_encode($oneMatch->events),
+                                'last_update' => time(),
+                            ),
+                            array( 'id' => $matchVerif->id )
+                        );
+                    }
                 }
             }
+            return true;
         }
+        return false;
     }
 
     /**
@@ -374,60 +398,65 @@ class dataModel
 
         $competitions = $this->getAllCompetitionsFromDB(false, 1);
 
-        $apiFoot = new \Model\apiFootModel\apiFootModel();
+        if($competitions != false){
 
-        foreach($competitions as $oneCompetition){
+            $apiFoot = new \Model\apiFootModel\apiFootModel();
 
-            $competition_id = $oneCompetition->id;
+            foreach($competitions as $oneCompetition){
 
-            $standing = $apiFoot->getStandingCompetition($competition_id);
+                $competition_id = $oneCompetition->id;
 
-            foreach($standing as $team){
+                $standing = $apiFoot->getStandingCompetition($competition_id);
 
-                $teamVerif = $this->getTeamStanding($team->comp_id, $team->team_id);
+                foreach($standing as $team){
 
-                if(!$teamVerif){
-                    $wpdb->insert(
-                        $table_name,
-                        array(
-                            'id_competition' => $team->comp_id,
-                            'id_stage' => $team->stage_id,
-                            'id_team' => $team->team_id,
-                            'team_name' => $team->team_name,
-                            'comp_group' => $team->comp_group,
-                            'position' => $team->position,
-                            'status' => $team->status,
-                            'point' => $team->points,
-                            'overall_w' => $team->overall_w,
-                            'overall_d' => $team->overall_d,
-                            'overall_l' => $team->overall_l,
-                            'gd' => $team->gd,
-                            'season' => $team->season,
-                            'last_update' => time(),
-                        )
-                    );
-                }else{
-                    $wpdb->update(
-                        $table_name,
-                        array(
-                            'id_stage' => $team->stage_id,
-                            'team_name' => $team->team_name,
-                            'comp_group' => $team->comp_group,
-                            'position' => $team->position,
-                            'status' => $team->status,
-                            'point' => $team->points,
-                            'overall_w' => $team->overall_w,
-                            'overall_d' => $team->overall_d,
-                            'overall_l' => $team->overall_l,
-                            'gd' => $team->gd,
-                            'season' => $team->season,
-                            'last_update' => time(),
-                        ),
-                        array( 'id' => $teamVerif->id )
-                    );
+                    $teamVerif = $this->getTeamStanding($team->comp_id, $team->team_id);
+
+                    if(!$teamVerif){
+                        $wpdb->insert(
+                            $table_name,
+                            array(
+                                'id_competition' => $team->comp_id,
+                                'id_stage' => $team->stage_id,
+                                'id_team' => $team->team_id,
+                                'team_name' => $team->team_name,
+                                'comp_group' => $team->comp_group,
+                                'position' => $team->position,
+                                'status' => $team->status,
+                                'point' => $team->points,
+                                'overall_w' => $team->overall_w,
+                                'overall_d' => $team->overall_d,
+                                'overall_l' => $team->overall_l,
+                                'gd' => $team->gd,
+                                'season' => $team->season,
+                                'last_update' => time(),
+                            )
+                        );
+                    }else{
+                        $wpdb->update(
+                            $table_name,
+                            array(
+                                'id_stage' => $team->stage_id,
+                                'team_name' => $team->team_name,
+                                'comp_group' => $team->comp_group,
+                                'position' => $team->position,
+                                'status' => $team->status,
+                                'point' => $team->points,
+                                'overall_w' => $team->overall_w,
+                                'overall_d' => $team->overall_d,
+                                'overall_l' => $team->overall_l,
+                                'gd' => $team->gd,
+                                'season' => $team->season,
+                                'last_update' => time(),
+                            ),
+                            array( 'id' => $teamVerif->id )
+                        );
+                    }
                 }
             }
+            return true;
         }
+        return false;
     }
 
     /**
@@ -443,55 +472,60 @@ class dataModel
 
         $apiFoot = new \Model\apiFootModel\apiFootModel();
 
-        foreach($allStanding as $standing){
+        if($allStanding != false){
 
-            $id_team = $standing->id_team;
+            foreach($allStanding as $standing){
 
-            $teamVerif = $this->getTeamById($id_team);
+                $id_team = $standing->id_team;
 
-            $team = $apiFoot->getTeam($id_team);
+                $teamVerif = $this->getTeamById($id_team);
 
-            if(!$teamVerif){
-                $wpdb->insert(
-                    $table_name,
-                    array(
-                        'id' => $team->team_id,
-                        'name' => $team->name,
-                        'country' => $team->country,
-                        'founded' => $team->founded,
-                        'leagues' => $team->leagues,
-                        'venue_name' => $team->venue_name,
-                        'venue_city' => $team->venue_city,
-                        'coach_name' => $team->coach_name,
-                        'coach_id' => $team->coach_id,
-                        'transfers_in' =>json_encode($team->transfers_in),
-                        'transfers_out' => json_encode($team->transfers_out),
-                        'last_update' => time(),
-                    )
-                );
-            }else{
-                $wpdb->update(
-                    $table_name,
-                    array(
-                        /**
-                         * we are modify by hand so we are not updating theme
-                         * 'name' => $team->name,
-                         */
-                        'country' => $team->country,
-                        'founded' => $team->founded,
-                        'leagues' => $team->leagues,
-                        'venue_name' => $team->venue_name,
-                        'venue_city' => $team->venue_city,
-                        'coach_name' => $team->coach_name,
-                        'coach_id' => $team->coach_id,
-                        'transfers_in' =>json_encode($team->transfers_in),
-                        'transfers_out' => json_encode($team->transfers_out),
-                        'last_update' => time(),	// integer
-                    ),
-                    array( 'id' => $teamVerif->id )
-                );
+                $team = $apiFoot->getTeam($id_team);
+
+                if(!$teamVerif){
+                    $wpdb->insert(
+                        $table_name,
+                        array(
+                            'id' => $team->team_id,
+                            'name' => $team->name,
+                            'country' => $team->country,
+                            'founded' => $team->founded,
+                            'leagues' => $team->leagues,
+                            'venue_name' => $team->venue_name,
+                            'venue_city' => $team->venue_city,
+                            'coach_name' => $team->coach_name,
+                            'coach_id' => $team->coach_id,
+                            'transfers_in' =>json_encode($team->transfers_in),
+                            'transfers_out' => json_encode($team->transfers_out),
+                            'last_update' => time(),
+                        )
+                    );
+                }else{
+                    $wpdb->update(
+                        $table_name,
+                        array(
+                            /**
+                             * we are modify by hand so we are not updating theme
+                             * 'name' => $team->name,
+                             */
+                            'country' => $team->country,
+                            'founded' => $team->founded,
+                            'leagues' => $team->leagues,
+                            'venue_name' => $team->venue_name,
+                            'venue_city' => $team->venue_city,
+                            'coach_name' => $team->coach_name,
+                            'coach_id' => $team->coach_id,
+                            'transfers_in' =>json_encode($team->transfers_in),
+                            'transfers_out' => json_encode($team->transfers_out),
+                            'last_update' => time(),	// integer
+                        ),
+                        array( 'id' => $teamVerif->id )
+                    );
+                }
             }
+            return true;
         }
+        return false;
     }
 
     /**
@@ -609,7 +643,7 @@ class dataModel
 
             $table_name = $wpdb->prefix . 'competition';
 
-            $competition = $wpdb->get_results('SELECT * FROM '. $table_name . ' WHERE id =' . $id);
+            $competition = $wpdb->get_row('SELECT * FROM '. $table_name . ' WHERE id =' . $id);
 
             if($competition != null){
                 return $competition;
@@ -684,23 +718,6 @@ class dataModel
     }
 
     /**
-     * get all standing from the data base
-     * @return bool
-     */
-    public function getStandingFromDb(){
-        global $wpdb;
-
-        $table_name = $wpdb->prefix . 'standing';
-
-        $standing = $wpdb->get_results('SELECT * FROM '. $table_name);
-
-        if($standing != null){
-            return $standing;
-        }
-        return false;
-    }
-
-    /**
      * get all season available from the standing table
      * @return bool
      */
@@ -758,6 +775,23 @@ class dataModel
                 return $standing;
             }
             return false;
+        }
+        return false;
+    }
+
+    /**
+     * get all standing from the data base
+     * @return bool
+     */
+    public function getStandingFromDb(){
+        global $wpdb;
+
+        $table_name = $wpdb->prefix . 'standing';
+
+        $standing = $wpdb->get_results('SELECT * FROM '. $table_name);
+
+        if($standing != null){
+            return $standing;
         }
         return false;
     }
@@ -853,7 +887,10 @@ class dataModel
 
         $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE formatted_date < %s', $deletTime);
 
-        $wpdb->query($sql);
+        $result = $wpdb->query($sql);
+        if(false === $result){
+            return false;
+        }
 
         /**
          * remove standing (classement)
@@ -868,7 +905,10 @@ class dataModel
 
         $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE season = %s', $seasonToRemove);
 
-        $wpdb->query($sql);
+        $result = $wpdb->query($sql);
+        if(false === $result){
+            return false;
+        }
 
         /**
          * remove team
@@ -878,8 +918,11 @@ class dataModel
 
         $sql = $wpdb->prepare('DELETE FROM '.$table_name.' WHERE last_update < %s', $deletTime);
 
-        $wpdb->query($sql);
-
+        $result = $wpdb->query($sql);
+        if(false === $result){
+            return false;
+        }
+        return true;
     }
 
     /**

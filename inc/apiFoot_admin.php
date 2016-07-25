@@ -7,7 +7,6 @@
  * Time: 11:32
  */
 
-//TODO : update button try a ajax to have a return 'update complete
 //TODO : button image
 
 use Model\apiFootModel;
@@ -51,7 +50,7 @@ class apiFoot_admin
          */
         if((isset($_GET['insertCompetition']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['insertCompetition']) && $_GET['token'] == $token->meta_value)){
             $dataModel = new \Model\dataModel\dataModel();
-            $dataModel->insertCompetition();
+            $_SESSION['updateApi'] = $dataModel->insertCompetition();
         }
         /**
          * Update the standing (classement)
@@ -59,7 +58,7 @@ class apiFoot_admin
         if((isset($_GET['updateStanding']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['updateStanding']) && $_GET['token'] == $token->meta_value)){
             $dataModel = new \Model\dataModel\dataModel();
             $dataModel->createStandingTable();
-            $dataModel->insertUpdateStanding();
+            $_SESSION['updateApi'] = $dataModel->insertUpdateStanding();
         }
         /**
          * Update the team
@@ -67,23 +66,30 @@ class apiFoot_admin
         if((isset($_GET['updateTeam']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['updateTeam']) && $_GET['token'] == $token->meta_value)){
             $dataModel = new \Model\dataModel\dataModel();
             $dataModel->createTeamTable();
-            $dataModel->insertUpdateTeams();
+            $_SESSION['updateApi'] = $dataModel->insertUpdateTeams();
         }
         /**
-         * Update the team
+         * Update the match
          */
         if((isset($_GET['updateMatch']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['updateMatch']) && $_GET['token'] == $token->meta_value)){
             $dataModel = new \Model\dataModel\dataModel();
             $dataModel->createMatchTable();
-            $dataModel->insertUpdateMatch();
+            $_SESSION['updateApi'] = $dataModel->insertUpdateMatch();
         }
         /**
          * Update the team
          */
         if((isset($_GET['cleanDB']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['cleanDB']) && $_GET['token'] == $token->meta_value)){
-            $this->cleanDB();
+            $dataModel = new \Model\dataModel\dataModel();
+            $_SESSION['updateApi'] = $dataModel->removeOldEntries();
+
+
         }
 
+
+        /**
+         * update team from back office entries
+         */
 
         if((isset($_POST['udateTeam']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_POST['udateTeam']) && $_GET['token'] == $token->meta_value)){
             $this->crudBackOfficeTeam();
@@ -148,14 +154,6 @@ class apiFoot_admin
         $dataModel = new \Model\dataModel\dataModel();
         $token = $dataModel->getToken();
         include_once (__DIR__.'/../template/admin-update.php');
-    }
-
-    /**
-     * clean database from old entites
-     */
-    public function cleanDB(){
-        $dataModel = new \Model\dataModel\dataModel();
-        $dataModel->removeOldEntries();
     }
 
 

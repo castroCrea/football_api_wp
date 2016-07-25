@@ -12,6 +12,7 @@ use Model\dataModel\dataModel;
 
 class apiFoot_client
 {
+    private $ip = '127.0.0.1';
 
     public function __construct()
     {
@@ -22,6 +23,12 @@ class apiFoot_client
      * To call the template in you page template call function :
      *      getStandingPage  -> for standing
      *      getMatchPage  -> for match
+     * url :
+     *      %url%?updateCompetition -> update competition
+     *      %url%?updateStanding -> update standing (classement)
+     *      %url%?updateTeam -> update team
+     *      %url%?updateMatch -> update matchs from all competition
+     *      %url%?cleanDB -> clean Data base
      */
     private function run()
     {
@@ -38,6 +45,55 @@ class apiFoot_client
         if(isset($_POST['MatchCompetition']) && $_POST['MatchCompetition']){
             $this->getMatchPage();
         }
+
+        if(!is_admin()){
+            /**
+             * Update url for the cron, is in double from class addmin because here, in client part, I block the creation of a table
+             */
+            $dataModel = new \Model\dataModel\dataModel();
+
+            /**
+             * get the token with is set at the creation of option api table it's use to secure the update
+             */
+            $token = $dataModel->getToken();
+
+            /**
+             * Update the competition
+             */
+            if((isset($_GET['insertCompetition']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['insertCompetition']) && $_GET['token'] == $token->meta_value)){
+                $dataModel = new \Model\dataModel\dataModel();
+                $dataModel->insertCompetition();
+            }
+            /**
+             * Update the standing (classement)
+             */
+            if((isset($_GET['updateStanding']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['updateStanding']) && $_GET['token'] == $token->meta_value)){
+                $dataModel = new \Model\dataModel\dataModel();
+                $dataModel->insertUpdateStanding();
+            }
+            /**
+             * Update the team
+             */
+            if((isset($_GET['updateTeam']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['updateTeam']) && $_GET['token'] == $token->meta_value)){
+                $dataModel = new \Model\dataModel\dataModel();
+                $dataModel->insertUpdateTeams();
+            }
+            /**
+             * Update the match
+             */
+            if((isset($_GET['updateMatch']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['updateMatch']) && $_GET['token'] == $token->meta_value)){
+                $dataModel = new \Model\dataModel\dataModel();
+                $dataModel->insertUpdateMatch();
+            }
+            /**
+             * Update the team
+             */
+            if((isset($_GET['cleanDB']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_GET['cleanDB']) && $_GET['token'] == $token->meta_value)){
+                $this->cleanDB();
+            }
+        }
+
+
     }
 
     /**
