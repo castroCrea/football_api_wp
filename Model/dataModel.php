@@ -162,7 +162,7 @@ class dataModel
                 overall_w tinyint(3) DEFAULT 0 NOT NULL,
                 overall_d tinyint(3) DEFAULT 0 NOT NULL,
                 overall_l tinyint(3) DEFAULT 0 NOT NULL,
-                gd tinyint(3) DEFAULT 0 NOT NULL,
+                gd varchar(4) DEFAULT 0 NOT NULL,
                 season varchar(12) NOT NULL,
                 last_update int(11) DEFAULT NULL,
                 UNIQUE KEY id (id)
@@ -997,7 +997,7 @@ class dataModel
      * @param $status
      */
     public function updateCompetitionStatus($id, $status, $dateFrom, $dateTo, $classement, $season){
-        if(is_numeric($id) && is_numeric($status) && $dateFrom != null && $dateTo != null && $season != null && is_numeric($classement)){
+        if(is_numeric($id) && is_numeric($status) && $dateFrom != null && $dateTo != null && is_numeric($classement)){
 
             $dateFrom = htmlentities($dateFrom);
             $dateTo = htmlentities($dateTo);

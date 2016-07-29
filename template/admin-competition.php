@@ -19,6 +19,7 @@ if($allCompetition): ?>
                     <?php else: ?>
                         <label for="<?php echo $competition->id ?>" style="width: 250px;display: inline-block;"><input type="checkbox" name="competition[]" id="<?php echo $competition->id ?>" value="<?php echo $competition->id ?>" checked><?php echo $competition->name ?></label>
                     <?php endif ?>
+                    <p style="display: inline-block; width: 120px"><?php echo $competition->region ?></p>
                     <label for="date_from<?php echo $competition->id ?>" style="padding-right: 10px;"><?php _e('Date de bébut', 'apiFoot') ?> : <input type="text" name="date_from[<?php echo $competition->id ?>]" id="date_from<?php echo $competition->id ?>" value="<?php echo $competition->date_from ?>"></label>
                     <label for="date_to<?php echo $competition->id ?>" style="padding-right: 10px;"><?php _e('Date de fin', 'apiFoot') ?> : <input type="text" name="date_to[<?php echo $competition->id ?>]" id="date_to<?php echo $competition->id ?>" value="<?php echo $competition->date_to ?>"></label>
                     <label for="classement<?php echo $competition->id ?>" style="padding-right: 10px;"><?php _e('Votre ordre de préfèrence', 'apiFoot') ?> : <input type="number" name="classement[<?php echo $competition->id ?>]" id="classement<?php echo $competition->id ?>" value="<?php echo $competition->classement ?>"  style="width: 50px;"></label>

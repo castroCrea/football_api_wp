@@ -8,8 +8,6 @@
  */
 use Model\dataModel\dataModel;
 
-//TODO : css
-
 class apiFoot_client
 {
     private $ip = '127.0.0.1';

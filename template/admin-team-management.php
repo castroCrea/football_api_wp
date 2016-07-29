@@ -13,6 +13,7 @@ $actual_link = "http://$_SERVER[HTTP_HOST]$_SERVER[SCRIPT_NAME]?page=api-team";
         <?php foreach($teams as $oneTeam): ?>
             <form method="post" style="padding: 10px 0;border-top: 1px solid lightgrey;">
                 <input type="hidden" name="udateTeam" value="true">
+                <input type="hidden" name="token" value="<?php echo $token->meta_value ?>">
                 <input type="hidden" name="teamId" value="<?php echo $oneTeam->id ?>">
                 <label for="<?php echo $oneTeam->name ?>"><?php _e('Nom équipes','apiFoot') ?> : <input type="text" name="name" value="<?php echo $oneTeam->name ?>" id="<?php echo $oneTeam->name ?>"></label>
                 <label for="image<?php echo $oneTeam->id ?>"><?php _e('Logo équipes','apiFoot') ?> : <input type="text" name="image" value="<?php if($oneTeam->image != null){ echo $oneTeam->image; }else{ echo ''; } ?>" id="image<?php echo $oneTeam->id ?>"><input class="upload_image_button button button-primary" type="button" value="Upload Image" /></label>

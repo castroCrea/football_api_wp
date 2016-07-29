@@ -7,8 +7,6 @@
  * Time: 11:32
  */
 
-//TODO : button image
-
 use Model\apiFootModel;
 use Model\dataModel;
 
@@ -91,7 +89,7 @@ class apiFoot_admin
          * update team from back office entries
          */
 
-        if((isset($_POST['udateTeam']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_POST['udateTeam']) && $_GET['token'] == $token->meta_value)){
+        if((isset($_POST['udateTeam']) && $_SERVER['SERVER_ADDR'] == $this->ip) || (isset($_POST['udateTeam']) && $_POST['token'] == $token->meta_value)){
             $this->crudBackOfficeTeam();
             die();
         }
@@ -111,8 +109,12 @@ class apiFoot_admin
             $this->updateApiKey();
         }
 
-
+        /**
+         * upload of script
+         */
+        add_action('admin_enqueue_scripts', array($this, 'upload_scripts'));
     }
+
 
     /**
      * Administration page of apiFoot plugin
@@ -171,6 +173,7 @@ class apiFoot_admin
     public function teamManagement(){
         $dataModel = new \Model\dataModel\dataModel();
         $teams = $dataModel->getAllTeam();
+        $token = $dataModel->getToken();
         include_once (__DIR__.'/../template/admin-team-management.php');
     }
 
@@ -197,4 +200,15 @@ class apiFoot_admin
             $dataModel->updateCompetitionStatus($competition_id, 1, $dateFrom, $dateTo, $classement, $season);
         }
     }
+
+    /**
+     * upload script for back office, upload pictrue in manager team page
+     */
+    public function upload_scripts()
+    {
+        wp_enqueue_script('media-upload');
+        wp_enqueue_script('thickbox');
+        wp_enqueue_style('thickbox');
+    }
+
 }
